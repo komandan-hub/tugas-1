@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini Duck Hunt</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #1e1e24;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* Area Game */
+        #game-container {
+            width: 800px;
+            height: 500px;
+            background: 
+                url('bush-png-42049.jpg') no-repeat bottom left / 30%, 
+                url('bush-png-42049.jpg') no-repeat bottom right / 25%,
+                url('kartun.png') no-repeat top left 20% / 25%,
+                url('kartun.png') no-repeat top right 20% / 25%,
+                linear-gradient(to bottom, #4facfe 0%, #00f2fe 70%, #2ecc71 70%, #27ae60 100%);
+            position: relative;
+            overflow: hidden;
+            border: 6px solid #fff;
+            border-radius: 12px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+            cursor: crosshair;
+        }
+
+        /* Target / "Bebek" dengan Efek Gradasi & Animasi Berputar */
+        .duck {
+            width: 65px; 
+            height: 65px;
+            background-image: url('https://png.pngtree.com/png-clipart/20250212/original/pngtree-watermelon-fruit-png-image_20422729.png'); 
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            position: absolute;
+            bottom: 0;
+            cursor: crosshair;
+            transition: transform 90s ease;
+
+            /* Efek Gradasi Murni CSS (Membuat gambar memudar semitransparan ke arah bawah) */
+            -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 100%);
+            mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 100%);
+
+            /* Animasi Berputar Murni CSS (Berputar 360 derajat dalam 2 detik secara linear tanpa henti) */
+            animation: spin 2s linear infinite;
+        }
+
+        /* Animasi Rotasi Berputar */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Efek Api / Muzzle Flash (CSS Murni, Tanpa Gambar) */
+        .muzzle-flash {
+            width: 80px;
+            height: 80px;
+            background: radial-gradient(circle, rgba(255,223,0,1) 0%, rgba(255,69,0,0.8) 50%, rgba(255,0,0,0) 70%);
+            border-radius: 50%;
+            position: absolute;
+            pointer-events: none; 
+            transform: translate(-50%, -50%) scale(0);
+            animation: flashAnim 0.1s ease-out forwards;
+        }
+
+        @keyframes flashAnim {
+            0% { transform: translate(-50%, -50%) scale(0.3); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1.2); opacity: 0; }
+        }
+
+        /* Papan Skor Modern */
+        #ui {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 8px 16px;
+            border-radius: 30px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        #ui span {
+            color: #f1c40f;
+        }
+
+        /* Layar Game Over Modern */
+        #game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.75);
+            padding: 30px 50px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255,255,255,0.1);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+            display: none;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        #game-over h1 {
+            margin: 0 0 10px 0;
+            font-size: 36px;
+            letter-spacing: 2px;
+            color: #ff4757;
+            text-shadow: 0 2px 10px rgba(255,71,87,0.3);
+        }
+
+        #game-over p {
+            margin: 0 0 20px 0;
+            font-size: 18px;
+            color: #ddd;
+        }
+
+        button {
+            padding: 12px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            background: linear-gradient(45deg, #ff4757, #ff6b81);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(255,71,87,0.4);
+            transition: all 0.2s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255,71,87,0.6);
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translate(-50%, -45%); }
+            to { opacity: 1; transform: translate(-50%, -50%); }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div id="ui">Skor: <span id="score">0</span> &nbsp;|&nbsp; Nyawa: <span id="lives">3</span></div>
+        
+        <div id="game-over">
+            <h1>GAME OVER</h1>
+            <p>Skor Akhir Anda: <span id="final-score">0</span></p>
+            <button onclick="startGame()">Main Lagi</button>
+        </div>
+    </div>
+
+    <script>
+        const container = document.getElementById('game-container');
+        const scoreDisplay = document.getElementById('score');
+        const livesDisplay = document.getElementById('lives');
+        const gameOverScreen = document.getElementById('game-over');
+        const finalScoreDisplay = document.getElementById('final-score');
+
+        let score = 0;
+        let lives = 3;
+        let gameInterval;
+        let isPlaying = false;
+
+        // Memulai Game
+        function startGame() {
+            score = 0;
+            lives = 3;
+            isPlaying = true;
+            scoreDisplay.textContent = score;
+            livesDisplay.textContent = lives;
+            gameOverScreen.style.display = 'none';
+            
+            // Hapus sisa bebek jika ada
+            document.querySelectorAll('.duck').forEach(duck => duck.remove());
+
+            // Munculkan bebek setiap 1.5 detik
+            clearInterval(gameInterval);
+            gameInterval = setInterval(spawnDuck, 1500);
+        }
+
+        // Membuat Bebek Baru
+        function spawnDuck() {
+            if (!isPlaying) return;
+
+            const duck = document.createElement('div');
+            duck.classList.add('duck');
+
+            // Posisi awal acak di area bawah langit (batas rumput)
+            const startX = Math.random() * (container.clientWidth - 65);
+            duck.style.left = startX + 'px';
+            duck.style.top = '320px'; 
+
+            container.appendChild(duck);
+
+            // Logika Pergerakan Bebek
+            let speedY = Math.random() * 3 + 2; 
+            let speedX = (Math.random() - 0.5) * 4; 
+
+            // Catatan: Logika membalik arah hadap (scaleX) dihapus dari JavaScript karena 
+            // sekarang bentrok dengan animasi rotasi CSS (berputar 360 derajat otomatis meng-handle arah).
+
+            const moveInterval = setInterval(() => {
+                let currentTop = parseFloat(duck.style.top);
+                let currentLeft = parseFloat(duck.style.left);
+
+                // Update posisi
+                duck.style.top = (currentTop - speedY) + 'px';
+                duck.style.left = (currentLeft + speedX) + 'px';
+
+                // Jika bebek lolos ke atas layar
+                if (currentTop < -65) {
+                    clearInterval(moveInterval);
+                    duck.remove();
+                    reduceLife();
+                }
+            }, 20);
+
+            // Logika Tembak Bebek saat Di-klik
+            duck.addEventListener('mousedown', (e) => {
+                e.stopPropagation(); 
+                if (!isPlaying) return;
+
+                score += 10;
+                scoreDisplay.textContent = score;
+                
+                showMuzzleFlash(e.clientX, e.clientY); // Tampilkan efek api
+                
+                clearInterval(moveInterval);
+                duck.remove();
+            });
+        }
+
+        // Wadah klik container kosong (efek tembakan meleset)
+        container.addEventListener('mousedown', (e) => {
+            if (!isPlaying || e.target.classList.contains('duck')) return;
+            showMuzzleFlash(e.clientX, e.clientY);
+        });
+
+        // Fungsi Menampilkan Efek Api
+        function showMuzzleFlash(x, y) {
+            const flash = document.createElement('div');
+            flash.classList.add('muzzle-flash');
+            
+            // Menentukan posisi berdasarkan koordinat klik, disesuaikan ke area container
+            flash.style.left = (x - container.getBoundingClientRect().left) + 'px';
+            flash.style.top = (y - container.getBoundingClientRect().top) + 'px';
+            
+            container.appendChild(flash);
+            
+            // Menghapus efek setelah animasi selesai (100ms)
+            setTimeout(() => {
+                flash.remove();
+            }, 100);
+        }
+
+        // Mengurangi Nyawa jika bebek lolos
+        function reduceLife() {
+            if (!isPlaying) return;
+            lives--;
+            livesDisplay.textContent = lives;
+
+            if (lives <= 0) {
+                endGame();
+            }
+        }
+
+        // Game Over
+        function endGame() {
+            isPlaying = false;
+            clearInterval(gameInterval);
+            finalScoreDisplay.textContent = score;
+            gameOverScreen.style.display = 'block';
+        }
+
+        // Otomatis mulai saat halaman dimuat
+        startGame();
+    </script>
+</body>
+</html>
